@@ -1,9 +1,9 @@
 import { KeyPair, mnemonicToPrivateKey } from "@ton/crypto";
 import { beginCell, Cell, OpenedContract} from "@ton/core";
-import { TonClient, WalletContractV4 } from "@ton/ton";
+import { TonClient, WalletContractV3R2, WalletContractV4 } from "@ton/ton";
 
 export type OpenedWallet = {
-  contract: OpenedContract<WalletContractV4>;
+  contract: OpenedContract<WalletContractV3R2>;
   keyPair: KeyPair;
 };
 
@@ -19,7 +19,7 @@ export async function openWallet(mnemonic: string[], testnet: boolean) {
     apiKey: process.env.TONCENTER_API_KEY,
   });
 
-  const wallet = WalletContractV4.create({
+  const wallet = WalletContractV3R2.create({
     workchain: 0,
     publicKey: keyPair.publicKey,
   });
