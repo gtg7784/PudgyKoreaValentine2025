@@ -17,15 +17,29 @@ export async function uploadFolderToIPFS(folderPath: string): Promise<string> {
 export async function updateMetadataFiles(metadataFolderPath: string, imagesIpfsHash: string): Promise<void> {
   const files = readdirSync(metadataFolderPath);
 
+  files.forEach(async (filename, index) => {
+    console.log(index, filename)
+  });
+
   await Promise.all(files.map(async (filename, index) => {
     const filePath = path.join(metadataFolderPath, filename)
+    if (!filename.includes("json")) {
+      return;
+    }
+
     const file = await readFile(filePath);
+
+    const [metadataName] = filename.split(".");
+
+    console.log(metadataName, filename)
     
     const metadata = JSON.parse(file.toString());
     metadata.image =
-      index != files.length - 1
-        ? `ipfs://${imagesIpfsHash}/${index}.jpg`
-        : `ipfs://${imagesIpfsHash}/logo.jpg`;
+      metadataName === "collection"
+        ? `ipfs://${imagesIpfsHash}/logo.jpg`
+        : `ipfs://${imagesIpfsHash}/${metadataName}.jpg`
+
+    console.log(metadata.image)
     
     await writeFile(filePath, JSON.stringify(metadata));
   }));

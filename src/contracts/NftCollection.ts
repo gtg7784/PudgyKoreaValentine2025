@@ -10,6 +10,14 @@ import {
 import { isAxiosError } from "axios";
 import { encodeOffChainContent, OpenedWallet } from "../utils";
 
+export type mintParams = {
+  queryId: number | null,
+  itemOwnerAddress: Address,
+  itemIndex: number,
+  amount: bigint,
+  commonContentUrl: string
+}
+
 export type collectionData = {
   ownerAddress: Address;
   royaltyPercent: number;
@@ -21,9 +29,13 @@ export type collectionData = {
 
 export class NftCollection {
   private collectionData: collectionData;
+  private deployedAddress: Address | null = null;
 
-  constructor(collectionData: collectionData) {
+  constructor(collectionData: collectionData, collectionAddress?: Address) {
     this.collectionData = collectionData;
+    if (collectionAddress) {
+      this.deployedAddress = collectionAddress;
+    }
   }
 
   private createCodeCell(): Cell {
@@ -75,10 +87,18 @@ export class NftCollection {
   }
 
   public get address(): Address {
+    if (this.deployedAddress) {
+      return this.deployedAddress;
+    }
+
     return contractAddress(0, this.stateInit);
   }
 
   public async deploy(wallet: OpenedWallet) {
+    if (this.deployedAddress) {
+      throw new Error(`Collection is already deployed with address ${this.deployedAddress}`);
+    };
+
     const seqno = await wallet.contract.getSeqno();
     try {
       await wallet.contract.sendTransfer({
@@ -125,5 +145,22 @@ export class NftCollection {
     });
 
     return seqno;
+  }
+
+  public createMintBody(params: mintParams): Cell {
+    const body = beginCell();
+    body.storeUint(1, 32);
+    body.storeUint(params.queryId || 0, 64);
+    body.storeUint(params.itemIndex, 64);
+    body.storeCoins(params.amount);
+
+    const nftItemContent = beginCell();
+    nftItemContent.storeAddress(params.itemOwnerAddress);
+
+    const uriContent = beginCell();
+    uriContent.storeBuffer(Buffer.from(params.commonContentUrl));
+    nftItemContent.storeRef(uriContent.endCell());
+    body.storeRef(nftItemContent.endCell());
+    return body.endCell();
   }
 }
